@@ -165,7 +165,8 @@ export function Dashboard() {
           )}
 
           {/* Threat Matrix */}
-          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-xl flex flex-col">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-5 shadow-xl flex flex-col relative overflow-hidden">
+            <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-rose-500/50 to-transparent animate-scan" />
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-2">
                 <Eye className="w-4 h-4 text-rose-500" />
@@ -173,10 +174,11 @@ export function Dashboard() {
               </div>
               <div className="px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/20 text-[8px] font-bold text-rose-500 uppercase animate-pulse">Scanning</div>
             </div>
-            <div className="space-y-3">
+            <div className="space-y-3 relative z-10">
               {threats.map((threat) => (
-                <div key={threat.id} className="p-3 bg-black/40 rounded-xl border border-zinc-800 hover:border-rose-500/30 transition-all group">
-                  <div className="flex justify-between items-center mb-1">
+                <div key={threat.id} className="p-3 bg-black/40 rounded-xl border border-zinc-800 hover:border-rose-500/30 transition-all group relative overflow-hidden">
+                  <div className="absolute inset-0 bg-rose-500/5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                  <div className="flex justify-between items-center mb-1 relative">
                     <span className="text-[10px] font-mono text-rose-400 font-bold">{threat.id}</span>
                     <span className={cn(
                       "text-[8px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest",
@@ -186,7 +188,7 @@ export function Dashboard() {
                       {threat.risk}
                     </span>
                   </div>
-                  <div className="flex justify-between items-end">
+                  <div className="flex justify-between items-end relative">
                     <span className="text-xs text-zinc-200 font-medium">{threat.type}</span>
                     <span className="text-[10px] text-zinc-500 font-mono">{threat.distance}</span>
                   </div>

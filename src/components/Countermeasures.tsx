@@ -48,6 +48,9 @@ export function Countermeasures() {
     setTimeout(() => {
       setIsEmpCharging(false);
       addLog('EMP Pulse discharged - Local electronics disrupted');
+      // Screen shake effect
+      document.body.classList.add('animate-shake');
+      setTimeout(() => document.body.classList.remove('animate-shake'), 500);
     }, 3000);
   };
 

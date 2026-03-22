@@ -46,7 +46,10 @@ export default function App() {
   };
 
   return (
-    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans">
+    <div className="flex h-screen w-full bg-zinc-950 text-zinc-100 overflow-hidden font-sans relative">
+      <div className="absolute inset-0 tactical-grid pointer-events-none opacity-20" />
+      <div className="scanline" />
+      
       <Sidebar activeTab={activeTab} setActiveTab={setActiveTab} />
       
       <main className="flex-1 flex flex-col relative overflow-hidden">

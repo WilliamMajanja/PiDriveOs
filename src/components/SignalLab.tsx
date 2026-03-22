@@ -44,6 +44,12 @@ export function SignalLab() {
             ...s,
             power: Math.random() > 0.3 ? Math.floor(Math.random() * 40 + 60) : s.power
           }));
+        } else {
+          // Add some "peaks" to make it look like real signals
+          processedSignals = processedSignals.map((s: any, i: number) => {
+            if (i % 15 === 0) return { ...s, power: Math.floor(Math.random() * 30 + 60) };
+            return s;
+          });
         }
 
         setFrequencyData(processedSignals);
@@ -61,6 +67,30 @@ export function SignalLab() {
 
     return () => clearInterval(interval);
   }, [isJamming]);
+
+  const [interceptLogs, setInterceptLogs] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (isBypassActive) {
+      const interval = setInterval(() => {
+        const possibleLogs = [
+          `[OK] Handshake intercepted: DSRC_V2X_NODE_${Math.floor(Math.random() * 999)}`,
+          `[OK] Injecting spoofed priority packet (PRIO_${Math.floor(Math.random() * 5)})...`,
+          `[OK] Traffic controller state: ${Math.random() > 0.5 ? 'OVERRIDE_REQUESTED' : 'PHASE_LOCK_ENGAGED'}`,
+          `[..] Monitoring response stream for ACK...`,
+          `[OK] Phase transition initiated: GREEN_ALL_CLEAR`,
+          `[OK] Signal integrity: ${(Math.random() * 5 + 95).toFixed(1)}% | Latency: ${Math.floor(Math.random() * 10)}ms`,
+          `[WARN] Encryption layer detected: AES-128 (Bypassing...)`,
+          `[OK] Node ID spoofed: 0x${Math.floor(Math.random() * 0xFFFFFF).toString(16).toUpperCase()}`
+        ];
+        const newLog = possibleLogs[Math.floor(Math.random() * possibleLogs.length)];
+        setInterceptLogs(prev => [`[${new Date().toLocaleTimeString()}] ${newLog}`, ...prev].slice(0, 20));
+      }, 2000);
+      return () => clearInterval(interval);
+    } else {
+      setInterceptLogs([]);
+    }
+  }, [isBypassActive]);
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
@@ -395,32 +425,11 @@ export function SignalLab() {
                     </div>
                     <div className="flex-1 bg-black/20 rounded-xl p-4 font-mono text-[10px] space-y-2 overflow-y-auto custom-scrollbar border border-zinc-800/50">
                       {isBypassActive ? (
-                        <>
-                          <div className="text-emerald-500/80 flex gap-2">
-                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
-                            <span>[OK] Handshake intercepted: DSRC_V2X_NODE_772</span>
+                        interceptLogs.map((log, i) => (
+                          <div key={i} className="text-emerald-500/80 flex gap-2 animate-in fade-in slide-in-from-left-2 duration-300">
+                            <span>{log}</span>
                           </div>
-                          <div className="text-emerald-500/80 flex gap-2">
-                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
-                            <span>[OK] Injecting spoofed priority packet (PRIO_0)...</span>
-                          </div>
-                          <div className="text-emerald-500/80 flex gap-2">
-                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
-                            <span>[OK] Traffic controller state: OVERRIDE_REQUESTED</span>
-                          </div>
-                          <div className="text-zinc-500 flex gap-2">
-                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
-                            <span>[..] Monitoring response stream for ACK...</span>
-                          </div>
-                          <div className="text-emerald-500/80 flex gap-2">
-                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
-                            <span>[OK] Phase transition initiated: GREEN_ALL_CLEAR</span>
-                          </div>
-                          <div className="text-emerald-500/80 flex gap-2">
-                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
-                            <span>[OK] Signal integrity: 99.4% | Latency: 4ms</span>
-                          </div>
-                        </>
+                        ))
                       ) : (
                         <div className="h-full flex flex-col items-center justify-center text-zinc-700 italic gap-4">
                           <Unlock className="w-12 h-12 opacity-20" />
