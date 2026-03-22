@@ -1,0 +1,5 @@
+{
+  "name": "PiDriveOS Dashboard",
+  "description": "A comprehensive, idiot-proof dashboard for monitoring and calibrating a Raspberry Pi-based self-driving car.",
+  "requestFramePermissions": []
+}
