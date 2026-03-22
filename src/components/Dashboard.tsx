@@ -65,7 +65,7 @@ export function Dashboard() {
             time: new Date().toLocaleTimeString(),
             speed: obd.speed,
             rpm: obd.rpm / 100, // Scale for chart
-            load: obd.engineLoad,
+            load: obd.load,
           };
           const newData = [...prev, newPoint];
           if (newData.length > 20) newData.shift();
