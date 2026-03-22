@@ -12,10 +12,15 @@ export function OBDDiagnostics() {
     const fetchData = async () => {
       try {
         const response = await fetch('/api/obd');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const obdData = await response.json();
         setData(obdData);
       } catch (error) {
         console.error('Failed to fetch OBD data:', error);
+        // Add a small delay before retrying on failure
+        await new Promise(resolve => setTimeout(resolve, 2000));
       }
     };
 

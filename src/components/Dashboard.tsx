@@ -57,6 +57,9 @@ export function Dashboard() {
     const interval = setInterval(async () => {
       try {
         const response = await fetch('/api/obd');
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
         const obd = await response.json();
         setObdData(obd);
 

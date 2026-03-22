@@ -5,34 +5,45 @@ PiDriveOS is a comprehensive, open-source self-driving car platform designed to 
 ## ⚠️ Safety Warning
 **Self-driving vehicles are inherently dangerous.** This software is provided "as is" without warranty of any kind. Always test in a safe, enclosed environment away from people, pets, and property. **Always maintain a physical emergency kill switch that cuts power to the motors.**
 
+## 🛒 Hardware Shopping List
+
+To build a complete self-driving car using PiDriveOS, you will need the following hardware. We've categorized them to help you plan your build.
+
+### 1. Core Computing & Power
+| Item | Quantity | Recommended | Estimated Cost |
+| :--- | :--- | :--- | :--- |
+| **Raspberry Pi 5 (8GB or 16GB)** | 1 | [Raspberry Pi Foundation](https://www.raspberrypi.com/products/raspberry-pi-5/) | $80 - $120 |
+| **MicroSD Card (64GB+ A2)** | 1 | [SanDisk Extreme](https://www.amazon.com/SanDisk-64GB-Extreme-microSDXC-Adapter/dp/B07FCMKK5X) | $15 |
+| **Active Cooling Case** | 1 | [Argon ONE V3](https://www.argon40.com/products/argon-one-v3-case-for-raspberry-pi-5) | $30 |
+| **LiPo Battery (3S 5000mAh)** | 1 | [Zeee 3S LiPo](https://www.amazon.com/Zeee-5200mAh-Battery-Hardcase-Connector/dp/B076Z778MJ) | $40 |
+| **UBEC (5V/5A)** | 1 | [Hobbywing 5V/6V 3A/5A UBEC](https://www.amazon.com/Hobbywing-3A-UBEC-Switch-mode/dp/B008X396Y6) | $15 |
+
+### 2. Sensors & Vision
+| Item | Quantity | Recommended | Estimated Cost |
+| :--- | :--- | :--- | :--- |
+| **Camera Module** | 1 | [Raspberry Pi Camera Module 3 (Wide)](https://www.raspberrypi.com/products/camera-module-3/) | $35 |
+| **LiDAR Scanner** | 1 | [RPLidar A1M8](https://www.slamtec.com/en/Lidar/A1) | $100 |
+| **GPS Module** | 1 | [U-blox NEO-M8N](https://www.amazon.com/Beitian-BN-880-Compass-Antenna-Raspberry/dp/B078Y6JH47) | $20 |
+| **IMU (9-DOF)** | 1 | [Adafruit BNO055](https://www.adafruit.com/product/2472) | $35 |
+| **Ultrasonic Sensors** | 4 | [HC-SR04](https://www.amazon.com/Elegoo-HC-SR04-Ultrasonic-Distance-Arduino/dp/B01COSN7O6) | $10 |
+
+### 3. Actuation & Control
+| Item | Quantity | Recommended | Estimated Cost |
+| :--- | :--- | :--- | :--- |
+| **PWM Controller** | 1 | [PCA9685 16-Channel](https://www.adafruit.com/product/815) | $15 |
+| **Steering Servo** | 1 | [DS3218 20KG High Torque](https://www.amazon.com/ANNIMOS-Digital-Waterproof-Steering-Control/dp/B076CNK24W) | $20 |
+| **ESC (Electronic Speed Controller)** | 1 | [Hobbywing QuicRun 1060](https://www.amazon.com/Hobbywing-QUICRUN-1060-Brushed-ESC/dp/B00L1079S6) | $25 |
+| **RC Transmitter & Receiver** | 1 | [Flysky FS-i6X](https://www.amazon.com/Flysky-FS-i6X-Transmitter-FS-iA6B-Receiver/dp/B0744DPPL8) | $60 |
+
+---
+
 ## Hardware Requirements
 
-To build a complete self-driving car using PiDriveOS, you will need the following hardware:
-
-### Core Computing
-*   **Raspberry Pi 4 Model B (8GB) or Raspberry Pi 5:** The brain of the operation.
-*   **High-Speed MicroSD Card (64GB+):** Class 10 A2 recommended for fast read/write speeds.
-*   **Active Cooling Case:** The Pi will run heavy AI models and needs active cooling to prevent thermal throttling.
-
-### Sensors
-*   **Camera:** Raspberry Pi Camera Module 3 (Wide) or a high-quality USB webcam (e.g., Logitech C920). Used for lane detection and object recognition.
-*   **LiDAR (Optional but Recommended):** RPLidar A1M8 or similar for 360-degree obstacle avoidance and mapping.
-*   **GPS Module:** U-blox NEO-M8N or similar for global positioning and waypoint navigation.
-*   **IMU (Inertial Measurement Unit):** BNO085 or MPU6050 for accurate heading, acceleration, and tilt data.
-*   **Ultrasonic Sensors (HC-SR04):** For close-range obstacle detection (bumpers).
-
-### Actuation & Control
-*   **Motor Controller (ESC):** Compatible with your vehicle's motors (e.g., PCA9685 for PWM control).
-*   **Steering Servo:** High-torque servo motor for steering.
-*   **Drive Motor:** DC motor or brushless motor for propulsion.
-*   **RC Transmitter & Receiver:** **CRITICAL FOR SAFETY.** You must be able to take manual control at any time.
-
-### Hardware Interfacing & Control
 PiDriveOS is optimized for the following compute modules:
 *   **Raspberry Pi 5 (16GB):** Recommended for full autonomous stacks, multi-camera SLAM, and high-speed signal intelligence.
 *   **Raspberry Pi Zero 2 W:** Recommended for lightweight edge nodes, basic motor control, and low-power surveillance.
 
-#### Motor & Servo Control (PCA9685)
+### Motor & Servo Control (PCA9685)
 To replace or control native vehicle parts (steering, throttle, braking), PiDriveOS uses the **PCA9685 16-Channel 12-bit PWM Controller** via I2C:
 1.  **Wiring (Pi to PCA9685):**
     *   VCC -> 3.3V (Pin 1)
