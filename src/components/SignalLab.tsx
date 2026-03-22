@@ -12,13 +12,41 @@ export function SignalLab() {
   const [frequencyData, setFrequencyData] = useState<any[]>([]);
   const [gain, setGain] = useState(20);
   const [isHopping, setIsHopping] = useState(false);
+  const [isJamming, setIsJamming] = useState(false);
+  const [jammerDuration, setJammerDuration] = useState(0);
+  const [isBypassActive, setIsBypassActive] = useState(false);
+  const [isPidScanning, setIsPidScanning] = useState(false);
+  const [activeTab, setActiveTab] = useState<'spectrum' | 'bypass' | 'scanner'>('spectrum');
+
+  useEffect(() => {
+    let timer: NodeJS.Timeout;
+    if (isJamming) {
+      timer = setInterval(() => {
+        setJammerDuration(prev => prev + 1);
+      }, 1000);
+    } else {
+      setJammerDuration(0);
+    }
+    return () => clearInterval(timer);
+  }, [isJamming]);
 
   useEffect(() => {
     const fetchSignals = async () => {
       try {
         const response = await fetch('/api/signals');
         const data = await response.json();
-        setFrequencyData(data.signals.map((s: any) => ({ freq: s.x.toString(), power: s.y })));
+        
+        let processedSignals = data.signals.map((s: any) => ({ freq: s.x.toString(), power: s.y }));
+        
+        if (isJamming) {
+          // Simulate signal disruption/noise
+          processedSignals = processedSignals.map((s: any) => ({
+            ...s,
+            power: Math.random() > 0.3 ? Math.floor(Math.random() * 40 + 60) : s.power
+          }));
+        }
+
+        setFrequencyData(processedSignals);
         setGain(data.gain);
         if (data.source === 'HACKRF_ONE') setSource('hackrf');
         else if (data.source === 'ESP32') setSource('esp32');
@@ -32,7 +60,7 @@ export function SignalLab() {
     fetchSignals();
 
     return () => clearInterval(interval);
-  }, []);
+  }, [isJamming]);
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
@@ -144,18 +172,112 @@ export function SignalLab() {
               <h3 className="text-lg font-medium text-white">Tactical Controls</h3>
             </div>
             <div className="space-y-3">
-              <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                <Lock className="w-4 h-4" />
-                Signal Jammer
-              </button>
-              <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                <Unlock className="w-4 h-4" />
-                Protocol Bypass
-              </button>
-              <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
-                <Search className="w-4 h-4" />
-                PID Scanner
-              </button>
+              <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <Lock className={cn("w-4 h-4 transition-colors", isJamming ? "text-rose-500" : "text-zinc-500")} />
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">Signal Jammer</span>
+                </div>
+                <button 
+                  onClick={() => setIsJamming(!isJamming)}
+                  className={cn(
+                    "w-10 h-5 rounded-full transition-all relative",
+                    isJamming ? "bg-rose-500" : "bg-zinc-700"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
+                    isJamming ? "left-6" : "left-1"
+                  )} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <Unlock className={cn("w-4 h-4 transition-colors", isBypassActive ? "text-emerald-500" : "text-zinc-500")} />
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">Protocol Bypass</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsBypassActive(!isBypassActive);
+                    if (!isBypassActive) setActiveTab('bypass');
+                  }}
+                  className={cn(
+                    "w-10 h-5 rounded-full transition-all relative",
+                    isBypassActive ? "bg-emerald-500" : "bg-zinc-700"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
+                    isBypassActive ? "left-6" : "left-1"
+                  )} />
+                </button>
+              </div>
+              <div className="flex items-center justify-between p-3 bg-zinc-800/50 rounded-xl border border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <Search className={cn("w-4 h-4 transition-colors", isPidScanning ? "text-blue-500" : "text-zinc-500")} />
+                  <span className="text-xs font-bold text-zinc-300 uppercase tracking-widest">PID Scanner</span>
+                </div>
+                <button 
+                  onClick={() => {
+                    setIsPidScanning(!isPidScanning);
+                    if (!isPidScanning) setActiveTab('scanner');
+                  }}
+                  className={cn(
+                    "w-10 h-5 rounded-full transition-all relative",
+                    isPidScanning ? "bg-blue-500" : "bg-zinc-700"
+                  )}
+                >
+                  <div className={cn(
+                    "absolute top-1 w-3 h-3 bg-white rounded-full transition-all",
+                    isPidScanning ? "left-6" : "left-1"
+                  )} />
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Jammer Status Card */}
+          <div className={cn(
+            "bg-zinc-900 border rounded-2xl p-6 shadow-xl transition-all duration-500",
+            isJamming ? "border-rose-500/50 bg-rose-500/5" : "border-zinc-800"
+          )}>
+            <div className="flex items-center gap-3 mb-6">
+              <Activity className={cn("w-5 h-5", isJamming ? "text-rose-500" : "text-zinc-500")} />
+              <h3 className="text-lg font-medium text-white">Jammer Status</h3>
+            </div>
+            <div className="space-y-4">
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">State</span>
+                <span className={cn(
+                  "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                  isJamming ? "bg-rose-500/20 text-rose-500 animate-pulse" : "bg-zinc-800 text-zinc-500"
+                )}>
+                  {isJamming ? 'Active' : 'Standby'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Freq Range</span>
+                <span className="text-xs font-mono text-zinc-300">
+                  {source === 'hackrf' ? '1MHz - 6GHz' : source === 'esp32' ? '2.4GHz / 5GHz' : '300MHz - 900MHz'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Power Output</span>
+                <span className="text-xs font-mono text-zinc-300">{isJamming ? `${gain + 10} dBm` : '0 dBm'}</span>
+              </div>
+              <div className="flex justify-between items-center">
+                <span className="text-[10px] text-zinc-500 uppercase tracking-widest">Duration</span>
+                <span className="text-xs font-mono text-zinc-300">
+                  {Math.floor(jammerDuration / 60)}:{(jammerDuration % 60).toString().padStart(2, '0')}s
+                </span>
+              </div>
+              {isJamming && (
+                <div className="pt-4 border-t border-rose-500/20">
+                  <div className="flex items-center gap-2 text-[10px] text-rose-400 font-bold uppercase tracking-widest">
+                    <AlertCircle className="w-3 h-3" />
+                    High Heat Warning
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -164,9 +286,40 @@ export function SignalLab() {
         <div className="lg:col-span-3 flex flex-col gap-6">
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex-1">
             <div className="flex items-center justify-between mb-6">
-              <div className="flex items-center gap-3">
-                <ShieldAlert className="w-5 h-5 text-rose-500" />
-                <h3 className="text-lg font-medium text-white">Signal Intelligence Center</h3>
+              <div className="flex items-center gap-6">
+                <div className="flex items-center gap-3">
+                  <ShieldAlert className="w-5 h-5 text-rose-500" />
+                  <h3 className="text-lg font-medium text-white">Signal Intelligence Center</h3>
+                </div>
+                <div className="flex bg-zinc-800/50 p-1 rounded-lg border border-zinc-800">
+                  <button 
+                    onClick={() => setActiveTab('spectrum')}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                      activeTab === 'spectrum' ? "bg-zinc-700 text-white" : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    Spectrum
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('bypass')}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                      activeTab === 'bypass' ? "bg-emerald-500/20 text-emerald-400" : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    Bypass
+                  </button>
+                  <button 
+                    onClick={() => setActiveTab('scanner')}
+                    className={cn(
+                      "px-3 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider transition-all",
+                      activeTab === 'scanner' ? "bg-blue-500/20 text-blue-400" : "text-zinc-500 hover:text-zinc-300"
+                    )}
+                  >
+                    Scanner
+                  </button>
+                </div>
               </div>
               <div className="flex items-center gap-4">
                 <div className="flex items-center gap-2">
@@ -183,35 +336,144 @@ export function SignalLab() {
             </div>
 
             <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 h-[400px]">
-              {/* Spectrum Analyzer */}
-              <div className="xl:col-span-2 bg-black/40 rounded-xl p-6 border border-zinc-800 flex flex-col">
-                <div className="flex justify-between items-center mb-6">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Waterfall Spectrum Analyzer</div>
-                  <div className="text-[10px] text-zinc-600 font-mono">PEAK: -{Math.floor(Math.random() * 20 + 40)} dBm</div>
-                </div>
-                <div className="flex-1">
-                  <ResponsiveContainer width="100%" height="100%">
-                    <BarChart data={frequencyData}>
-                      <XAxis dataKey="freq" hide />
-                      <YAxis hide domain={[0, 100]} />
-                      <Tooltip 
-                        contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
-                        itemStyle={{ color: '#10b981' }}
-                        labelStyle={{ color: '#71717a', fontSize: '10px' }}
-                      />
-                      <Bar dataKey="power" radius={[4, 4, 0, 0]}>
-                        {frequencyData.map((entry, index) => (
-                          <Cell key={`cell-${index}`} fill={entry.power > 80 ? '#f43f5e' : entry.power > 50 ? '#fbbf24' : '#10b981'} opacity={0.8} />
-                        ))}
-                      </Bar>
-                    </BarChart>
-                  </ResponsiveContainer>
-                </div>
-                <div className="flex justify-between mt-4 text-[9px] text-zinc-600 font-mono uppercase tracking-widest">
-                  <span>{source === 'hackrf' ? '1.0 MHz' : source === 'esp32' ? '2.401 GHz' : '300 MHz'}</span>
-                  <span>Center: {source === 'hackrf' ? '3.0 GHz' : source === 'esp32' ? '2.437 GHz' : '600 MHz'}</span>
-                  <span>{source === 'hackrf' ? '6.0 GHz' : source === 'esp32' ? '2.484 GHz' : '900 MHz'}</span>
-                </div>
+              {/* Main Display Area */}
+              <div className="xl:col-span-2 bg-black/40 rounded-xl p-6 border border-zinc-800 flex flex-col relative overflow-hidden">
+                {activeTab === 'spectrum' && (
+                  <>
+                    {isJamming && (
+                      <div className="absolute inset-0 bg-rose-500/5 pointer-events-none flex items-center justify-center z-10">
+                        <div className="flex flex-col items-center gap-2">
+                          <div className="flex gap-1">
+                            {[1, 2, 3].map(i => (
+                              <div key={i} className="w-1 h-8 bg-rose-500/40 animate-pulse" style={{ animationDelay: `${i * 200}ms` }} />
+                            ))}
+                          </div>
+                          <span className="text-[10px] font-bold text-rose-500 uppercase tracking-[0.2em] animate-pulse">Jamming Active</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Waterfall Spectrum Analyzer</div>
+                      <div className="text-[10px] text-zinc-600 font-mono">PEAK: -{Math.floor(Math.random() * 20 + 40)} dBm</div>
+                    </div>
+                    <div className="flex-1">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <BarChart data={frequencyData}>
+                          <XAxis dataKey="freq" hide />
+                          <YAxis hide domain={[0, 100]} />
+                          <Tooltip 
+                            contentStyle={{ backgroundColor: '#09090b', border: '1px solid #27272a', borderRadius: '8px' }}
+                            itemStyle={{ color: '#10b981' }}
+                            labelStyle={{ color: '#71717a', fontSize: '10px' }}
+                          />
+                          <Bar dataKey="power" radius={[4, 4, 0, 0]}>
+                            {frequencyData.map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.power > 80 ? '#f43f5e' : entry.power > 50 ? '#fbbf24' : '#10b981'} opacity={0.8} />
+                            ))}
+                          </Bar>
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="flex justify-between mt-4 text-[9px] text-zinc-600 font-mono uppercase tracking-widest">
+                      <span>{source === 'hackrf' ? '1.0 MHz' : source === 'esp32' ? '2.401 GHz' : '300 MHz'}</span>
+                      <span>Center: {source === 'hackrf' ? '3.0 GHz' : source === 'esp32' ? '2.437 GHz' : '600 MHz'}</span>
+                      <span>{source === 'hackrf' ? '6.0 GHz' : source === 'esp32' ? '2.484 GHz' : '900 MHz'}</span>
+                    </div>
+                  </>
+                )}
+
+                {activeTab === 'bypass' && (
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Protocol Bypass Monitor</div>
+                      <div className={cn(
+                        "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                        isBypassActive ? "bg-emerald-500/20 text-emerald-500 animate-pulse" : "bg-zinc-800 text-zinc-600"
+                      )}>
+                        {isBypassActive ? 'INTERCEPTING_V2X' : 'IDLE'}
+                      </div>
+                    </div>
+                    <div className="flex-1 bg-black/20 rounded-xl p-4 font-mono text-[10px] space-y-2 overflow-y-auto custom-scrollbar border border-zinc-800/50">
+                      {isBypassActive ? (
+                        <>
+                          <div className="text-emerald-500/80 flex gap-2">
+                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
+                            <span>[OK] Handshake intercepted: DSRC_V2X_NODE_772</span>
+                          </div>
+                          <div className="text-emerald-500/80 flex gap-2">
+                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
+                            <span>[OK] Injecting spoofed priority packet (PRIO_0)...</span>
+                          </div>
+                          <div className="text-emerald-500/80 flex gap-2">
+                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
+                            <span>[OK] Traffic controller state: OVERRIDE_REQUESTED</span>
+                          </div>
+                          <div className="text-zinc-500 flex gap-2">
+                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
+                            <span>[..] Monitoring response stream for ACK...</span>
+                          </div>
+                          <div className="text-emerald-500/80 flex gap-2">
+                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
+                            <span>[OK] Phase transition initiated: GREEN_ALL_CLEAR</span>
+                          </div>
+                          <div className="text-emerald-500/80 flex gap-2">
+                            <span className="text-zinc-600">[{new Date().toLocaleTimeString()}]</span>
+                            <span>[OK] Signal integrity: 99.4% | Latency: 4ms</span>
+                          </div>
+                        </>
+                      ) : (
+                        <div className="h-full flex flex-col items-center justify-center text-zinc-700 italic gap-4">
+                          <Unlock className="w-12 h-12 opacity-20" />
+                          <span className="uppercase tracking-[0.2em] text-[10px]">Activate Protocol Bypass to begin interception...</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'scanner' && (
+                  <div className="flex-1 flex flex-col">
+                    <div className="flex justify-between items-center mb-6">
+                      <div className="text-[10px] text-zinc-500 uppercase tracking-widest">PID Scanner Results</div>
+                      <div className={cn(
+                        "text-[10px] font-bold uppercase tracking-widest px-2 py-0.5 rounded",
+                        isPidScanning ? "bg-blue-500/20 text-blue-500 animate-pulse" : "bg-zinc-800 text-zinc-600"
+                      )}>
+                        {isPidScanning ? 'SCANNING_ECU' : 'IDLE'}
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      {[
+                        { pid: '0x0C', name: 'Engine RPM', val: '2450', unit: 'RPM' },
+                        { pid: '0x0D', name: 'Vehicle Speed', val: '42', unit: 'km/h' },
+                        { pid: '0x05', name: 'Coolant Temp', val: '92', unit: '°C' },
+                        { pid: '0x11', name: 'Throttle Pos', val: '18.4', unit: '%' },
+                        { pid: '0x0F', name: 'Intake Temp', val: '34', unit: '°C' },
+                        { pid: '0x04', name: 'Engine Load', val: '22.1', unit: '%' },
+                      ].map(p => (
+                        <div key={p.pid} className="p-3 bg-black/20 border border-zinc-800 rounded-xl flex justify-between items-center group hover:border-blue-500/30 transition-all">
+                          <div>
+                            <div className="text-[8px] text-zinc-600 font-mono">{p.pid}</div>
+                            <div className="text-[10px] text-zinc-300 uppercase font-bold">{p.name}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-xs font-mono text-blue-400 font-bold">{isPidScanning ? p.val : '---'}</div>
+                            <div className="text-[8px] text-zinc-600 uppercase font-mono">{p.unit}</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    {isPidScanning && (
+                      <div className="mt-6 p-3 bg-blue-500/5 border border-blue-500/20 rounded-xl flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <Activity className="w-3 h-3 text-blue-500" />
+                          <span className="text-[9px] text-blue-400 uppercase font-bold tracking-widest">Bus Traffic: 42.1 KB/s</span>
+                        </div>
+                        <div className="text-[9px] text-zinc-500 font-mono">PACKETS: 1,422 | ERRORS: 0</div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
 
               {/* Detection Log */}

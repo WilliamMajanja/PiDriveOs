@@ -34,7 +34,11 @@ async function startServer() {
       load: 35 + (Math.random() - 0.5) * 5,
       throttlePos: 22 + (Math.random() - 0.5) * 2,
       voltage: 14.2 + (Math.random() - 0.5) * 0.2,
-      dtcCount: 0,
+      dtcCount: 2,
+      dtcs: [
+        { code: 'P0300', description: 'Random or Multiple Cylinder Misfire Detected' },
+        { code: 'P0171', description: 'System Too Lean (Bank 1)' }
+      ],
       vin: '1G1RC6E4XFU******',
       protocol: 'ISO 15765-4 CAN (11 bit ID, 500 kbit/s)'
     });

@@ -44,6 +44,7 @@ export interface OBDData {
   dtcCount: number;
   vin: string;
   protocol: string;
+  dtcs?: { code: string; description: string }[];
 }
 
 export interface SignalProtocol {

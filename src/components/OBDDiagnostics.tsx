@@ -156,6 +156,27 @@ export function OBDDiagnostics() {
             <div className="text-xl font-bold text-white">{data.dtcCount} DTCs</div>
             <div className="text-[10px] text-zinc-500 uppercase tracking-widest mt-1">Diagnostic Trouble Codes</div>
           </div>
+
+          {/* DTC List Section */}
+          {data.dtcs && data.dtcs.length > 0 && (
+            <div className="md:col-span-3 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl animate-in slide-in-from-bottom-4 duration-500">
+              <div className="flex items-center gap-3 mb-6">
+                <AlertCircle className="w-5 h-5 text-rose-500" />
+                <h3 className="text-lg font-medium text-white uppercase tracking-tight">Detected Trouble Codes</h3>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {data.dtcs.map((dtc, i) => (
+                  <div key={i} className="p-4 bg-rose-500/5 border border-rose-500/10 rounded-xl group hover:border-rose-500/30 transition-all">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-lg font-mono font-bold text-rose-400">{dtc.code}</span>
+                      <span className="text-[8px] bg-rose-500/20 text-rose-500 px-2 py-0.5 rounded-full uppercase font-bold">Stored</span>
+                    </div>
+                    <p className="text-xs text-zinc-400 leading-relaxed">{dtc.description}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Diagnostic Console */}

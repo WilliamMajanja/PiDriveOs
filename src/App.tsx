@@ -12,6 +12,7 @@ import { SystemHealth } from './components/SystemHealth';
 import { SignalLab } from './components/SignalLab';
 import { ThreatIntelligence } from './components/ThreatIntelligence';
 import { OBDDiagnostics } from './components/OBDDiagnostics';
+import { Countermeasures } from './components/Countermeasures';
 import { Settings } from './components/Settings';
 import { EmergencyStop } from './components/EmergencyStop';
 
@@ -33,6 +34,8 @@ export default function App() {
         return <SignalLab />;
       case 'intel':
         return <ThreatIntelligence />;
+      case 'counter':
+        return <Countermeasures />;
       case 'obd':
         return <OBDDiagnostics />;
       case 'settings':

@@ -1,5 +1,5 @@
 import React from 'react';
-import { LayoutDashboard, Map, Settings, Activity, SlidersHorizontal, CarFront, Zap, ShieldCheck } from 'lucide-react';
+import { LayoutDashboard, Map, Settings, Activity, SlidersHorizontal, CarFront, Zap, ShieldCheck, ShieldAlert } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface SidebarProps {
@@ -15,6 +15,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: 'health', label: 'System Health', icon: Activity },
     { id: 'signals', label: 'Signal Lab', icon: Zap },
     { id: 'intel', label: 'Threat Intel', icon: ShieldCheck },
+    { id: 'counter', label: 'Countermeasures', icon: ShieldAlert },
     { id: 'obd', label: 'OBD II Diagnostics', icon: CarFront },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
