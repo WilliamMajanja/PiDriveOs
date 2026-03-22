@@ -5,6 +5,8 @@ import { SignalThreat, V2VNode, ThreatLevel } from '../types';
 
 import { GoogleGenAI } from "@google/genai";
 
+import ReactMarkdown from 'react-markdown';
+
 export function ThreatIntelligence() {
   const [threats, setThreats] = useState<SignalThreat[]>([]);
   const [v2vNodes, setV2vNodes] = useState<V2VNode[]>([]);
@@ -12,6 +14,7 @@ export function ThreatIntelligence() {
   const [activeAudit, setActiveAudit] = useState<string | null>(null);
   const [auditResult, setAuditResult] = useState<string | null>(null);
   const [isAuditing, setIsAuditing] = useState(false);
+  const [riskScore, setRiskScore] = useState<number | null>(null);
 
   useEffect(() => {
     const fetchThreats = async () => {
@@ -49,23 +52,38 @@ export function ThreatIntelligence() {
   const runAudit = async (threat: SignalThreat) => {
     setIsAuditing(true);
     setAuditResult(null);
+    setRiskScore(null);
     try {
       const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
       const response = await ai.models.generateContent({
         model: "gemini-3-flash-preview",
-        contents: `Analyze this signal threat for a Sovereign Edge AI vehicle cluster:
-        Type: ${threat.type}
-        Source: ${threat.source}
-        Frequency: ${threat.frequency}
-        Power: ${threat.power} dBm
-        Description: ${threat.description}
-        
-        Provide a technical audit including:
-        1. Possible attack vector.
-        2. Impact on cluster stability.
-        3. Recommended defensive action.`,
+        contents: `As a Senior Sovereign Edge AI Security Architect, perform a DEEP TACTICAL ANALYSIS of the following signal threat detected in a V2X (Vehicle-to-Everything) mesh network:
+
+        THREAT DATA:
+        - Type: ${threat.type}
+        - Source: ${threat.source}
+        - Frequency: ${threat.frequency}
+        - Power: ${threat.power} dBm
+        - Description: ${threat.description}
+        - Timestamp: ${new Date(threat.timestamp).toISOString()}
+
+        REQUIRED ANALYSIS (Markdown format):
+        1. **Threat Profile & Origin Analysis**: Identify the likely actor (State-level, Criminal, Script Kiddie) and the sophistication of the hardware required.
+        2. **Potential Attack Vectors**: Detail exactly how this signal could compromise the PiDriveOS cluster (e.g., buffer overflows in DSRC stack, timing attacks on GPS sync, etc.).
+        3. **Predictive Capability Assessment**: Based on this signal, what is the most likely NEXT move by the attacker? (e.g., Escalation to full denial of service, lateral movement to other nodes).
+        4. **Impact on Sovereign Autonomy**: How does this affect the vehicle's ability to operate without external governance or cloud dependency?
+        5. **Recommended Countermeasures (Tactical & Strategic)**: Provide immediate actions (e.g., frequency hopping, MAC randomization) and long-term hardening steps.
+        6. **Risk Score (0-100)**: Provide a numerical risk assessment at the very end in the format: [RISK_SCORE: X]`,
       });
-      setAuditResult(response.text);
+      
+      const text = response.text;
+      setAuditResult(text);
+      
+      // Extract risk score
+      const match = text.match(/\[RISK_SCORE:\s*(\d+)\]/);
+      if (match) {
+        setRiskScore(parseInt(match[1]));
+      }
     } catch (error) {
       console.error('Audit failed:', error);
       setAuditResult('Audit failed. Check connectivity to Sovereign AI engine.');
@@ -290,54 +308,70 @@ export function ThreatIntelligence() {
       {/* Audit Modal */}
       {activeAudit && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
-          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
-            <div className="flex items-center justify-between mb-8">
+          <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-3xl w-full shadow-2xl max-h-[90vh] flex flex-col">
+            <div className="flex items-center justify-between mb-8 shrink-0">
               <div className="flex items-center gap-3">
                 <Search className="w-6 h-6 text-emerald-500" />
-                <h3 className="text-xl font-bold text-white">Sovereign AI Audit Report</h3>
+                <h3 className="text-xl font-bold text-white uppercase tracking-tight">Sovereign AI Tactical Audit</h3>
               </div>
               <button onClick={() => {
                 setActiveAudit(null);
                 setAuditResult(null);
+                setRiskScore(null);
               }} className="text-zinc-500 hover:text-white transition-colors">✕</button>
             </div>
             
-            <div className="space-y-6">
-              <div className="p-4 bg-black/40 rounded-2xl border border-zinc-800 min-h-[150px] flex flex-col">
-                <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2">Signal Analysis</div>
+            <div className="flex-1 overflow-y-auto space-y-6 custom-scrollbar pr-2">
+              <div className="p-6 bg-black/40 rounded-2xl border border-zinc-800 min-h-[200px] flex flex-col">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest">Signal Intelligence Report</div>
+                  {riskScore !== null && (
+                    <div className={cn(
+                      "px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest border",
+                      riskScore > 70 ? "text-rose-500 border-rose-500/20 bg-rose-500/10" :
+                      riskScore > 40 ? "text-amber-500 border-amber-500/20 bg-amber-500/10" :
+                      "text-emerald-500 border-emerald-500/20 bg-emerald-500/10"
+                    )}>
+                      Risk Score: {riskScore}/100
+                    </div>
+                  )}
+                </div>
+                
                 {isAuditing ? (
-                  <div className="flex-1 flex items-center justify-center gap-3 text-emerald-500">
-                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
-                    <span className="text-xs font-mono uppercase tracking-widest">Reasoning Engine Active...</span>
+                  <div className="flex-1 flex flex-col items-center justify-center gap-4 text-emerald-500 py-12">
+                    <div className="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    <div className="text-xs font-mono uppercase tracking-widest animate-pulse">Reasoning Engine: Decoding Attack Vectors...</div>
                   </div>
                 ) : (
-                  <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                    {auditResult || "No audit data available."}
-                  </p>
+                  <div className="markdown-body">
+                    <ReactMarkdown>
+                      {auditResult || "No audit data available."}
+                    </ReactMarkdown>
+                  </div>
                 )}
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Recommendation</div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Tactical Recommendation</div>
                   <div className="text-sm font-semibold text-emerald-400 uppercase">
-                    {auditResult ? "ISOLATE SOURCE" : "PENDING"}
+                    {auditResult ? "EXECUTE COUNTERMEASURES" : "PENDING"}
                   </div>
                 </div>
                 <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700">
-                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Action Taken</div>
+                  <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Sovereign Status</div>
                   <div className="text-sm font-semibold text-zinc-300 uppercase">
-                    {auditResult ? "LOGGED & IGNORED" : "WAITING"}
+                    {auditResult ? "DEFENSE ACTIVE" : "WAITING"}
                   </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
                 <AlertTriangle className="w-5 h-5 text-rose-500" />
-                <p className="text-xs text-rose-400">
+                <p className="text-[10px] text-rose-400 leading-relaxed uppercase tracking-wide">
                   {threats.find(t => t.id === activeAudit)?.isGovernance 
-                    ? "This signal matches known patterns used in governance-led automated enforcement testing."
-                    : "This signal originates from a non-trusted V2X mesh node."}
+                    ? "CRITICAL: This signal matches known patterns used in governance-led automated enforcement testing. Deploying cloaking protocols is highly recommended."
+                    : "WARNING: This signal originates from a non-trusted V2X mesh node. Maintain isolation until source is verified."}
                 </p>
               </div>
             </div>
@@ -346,10 +380,11 @@ export function ThreatIntelligence() {
               onClick={() => {
                 setActiveAudit(null);
                 setAuditResult(null);
+                setRiskScore(null);
               }}
-              className="w-full mt-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all"
+              className="w-full mt-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all uppercase tracking-widest text-xs shadow-lg shadow-emerald-500/20"
             >
-              Close Audit
+              Close Tactical Report
             </button>
           </div>
         </div>

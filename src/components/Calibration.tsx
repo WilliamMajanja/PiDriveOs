@@ -33,14 +33,36 @@ export function Calibration() {
     setTimeout(() => setIsLeveling(false), 3000);
   };
 
+  const [setupStep, setSetupStep] = useState(0);
+  const [peripherals, setPeripherals] = useState({
+    sdr: { enabled: true, frequency: 915, gain: 40 },
+    obd: { enabled: true, protocol: 'ISO15765_4_CAN_11BIT_500K', port: '/dev/ttyUSB0' },
+    gps: { enabled: true, baud: 9600, port: '/dev/ttyAMA0' }
+  });
+
+  const setupSteps = [
+    { title: 'Hardware Check', description: 'Verifying Pi 5 & PWM Controller connectivity.' },
+    { title: 'Peripheral Sync', description: 'Initializing SDR, GPS, and OBD-II modules.' },
+    { title: 'Servo Mapping', description: 'Calibrating steering and throttle endpoints.' },
+    { title: 'Sovereign AI Boot', description: 'Loading Gemini 3 Flash tactical models.' }
+  ];
+
+  const handlePeripheralUpdate = (key: keyof typeof peripherals, updates: any) => {
+    setPeripherals(prev => ({ ...prev, [key]: { ...prev[key], ...updates } }));
+  };
+
   return (
     <div className="max-w-6xl mx-auto flex flex-col gap-8 animate-in fade-in duration-500 pb-20">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Settings2 className="w-8 h-8 text-emerald-500" />
-          <h2 className="text-3xl font-bold text-white tracking-tight">System Calibration</h2>
+          <h2 className="text-3xl font-bold text-white tracking-tight uppercase">PiDrive Tactical Setup</h2>
         </div>
         <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 px-4 py-2 bg-zinc-900/50 border border-zinc-800 rounded-xl">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">System Online</span>
+          </div>
           <button 
             onClick={startLeveling}
             disabled={isLeveling}
@@ -49,14 +71,61 @@ export function Calibration() {
             <Activity className={cn("w-4 h-4", isLeveling && "animate-spin")} />
             {isLeveling ? 'Leveling...' : 'Level IMU'}
           </button>
-          <button 
-            onClick={startEscCalibration}
-            disabled={isEscCalibrating}
-            className="px-6 py-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 rounded-xl text-sm font-bold uppercase tracking-widest transition-all flex items-center gap-2 disabled:opacity-50"
-          >
-            <ShieldAlert className={cn("w-4 h-4", isEscCalibrating && "animate-pulse")} />
-            {isEscCalibrating ? 'ESC Mode Active' : 'ESC Calibration'}
-          </button>
+        </div>
+      </div>
+
+      {/* Setup Wizard Progress */}
+      <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 shadow-2xl relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-1 bg-zinc-800">
+          <div 
+            className="h-full bg-emerald-500 transition-all duration-1000" 
+            style={{ width: `${((setupStep + 1) / setupSteps.length) * 100}%` }}
+          />
+        </div>
+        <div className="flex items-center justify-between mb-8">
+          <div>
+            <h3 className="text-lg font-bold text-white uppercase tracking-tight">PiDrive Initialization Wizard</h3>
+            <p className="text-xs text-zinc-500 mt-1">Follow these steps to configure your sovereign edge node.</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={() => setSetupStep(Math.max(0, setupStep - 1))}
+              className="p-2 text-zinc-500 hover:text-white transition-colors disabled:opacity-30"
+              disabled={setupStep === 0}
+            >
+              <RotateCcw className="w-4 h-4" />
+            </button>
+            <button 
+              onClick={() => setSetupStep(Math.min(setupSteps.length - 1, setupStep + 1))}
+              className="px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-[10px] font-bold uppercase tracking-widest rounded-lg transition-all"
+            >
+              {setupStep === setupSteps.length - 1 ? 'Finish' : 'Next Step'}
+            </button>
+          </div>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {setupSteps.map((step, i) => (
+            <div 
+              key={i}
+              className={cn(
+                "p-4 rounded-2xl border transition-all",
+                setupStep === i ? "bg-emerald-500/10 border-emerald-500/50" : 
+                setupStep > i ? "bg-zinc-800/30 border-emerald-500/20 opacity-60" :
+                "bg-zinc-800/10 border-zinc-800 opacity-40"
+              )}
+            >
+              <div className="flex items-center gap-2 mb-2">
+                <div className={cn(
+                  "w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold",
+                  setupStep >= i ? "bg-emerald-500 text-white" : "bg-zinc-800 text-zinc-500"
+                )}>
+                  {setupStep > i ? <CheckCircle2 className="w-3 h-3" /> : i + 1}
+                </div>
+                <span className="text-xs font-bold text-white uppercase tracking-tight">{step.title}</span>
+              </div>
+              <p className="text-[10px] text-zinc-400 leading-relaxed">{step.description}</p>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -66,7 +135,7 @@ export function Calibration() {
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
             <div className="flex items-center gap-3 mb-6">
               <Cpu className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-medium text-white">Compute Module</h3>
+              <h3 className="text-lg font-medium text-white uppercase tracking-tight">Compute Module</h3>
             </div>
             <div className="grid grid-cols-1 gap-3">
               {(['ZERO_2_W', 'PI_4', 'PI_5_8GB', 'PI_5_16GB'] as const).map((model) => (
@@ -84,6 +153,69 @@ export function Calibration() {
                   {piModel === model && <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.5)]" />}
                 </button>
               ))}
+            </div>
+          </div>
+
+          {/* Peripheral Configuration */}
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl">
+            <div className="flex items-center gap-3 mb-6">
+              <LayoutGrid className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-medium text-white uppercase tracking-tight">Peripherals</h3>
+            </div>
+            <div className="space-y-4">
+              {/* SDR */}
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">SDR (RTL-SDR)</span>
+                  <button 
+                    onClick={() => handlePeripheralUpdate('sdr', { enabled: !peripherals.sdr.enabled })}
+                    className={cn("w-8 h-4 rounded-full transition-all relative", peripherals.sdr.enabled ? "bg-blue-500" : "bg-zinc-800")}
+                  >
+                    <div className={cn("absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all", peripherals.sdr.enabled ? "left-4.5" : "left-0.5")} />
+                  </button>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div className="space-y-1">
+                    <span className="text-[8px] text-zinc-500 uppercase">Frequency (MHz)</span>
+                    <input 
+                      type="number" value={peripherals.sdr.frequency}
+                      onChange={(e) => handlePeripheralUpdate('sdr', { frequency: Number(e.target.value) })}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-[10px] font-mono text-blue-400"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <span className="text-[8px] text-zinc-500 uppercase">Gain (dB)</span>
+                    <input 
+                      type="number" value={peripherals.sdr.gain}
+                      onChange={(e) => handlePeripheralUpdate('sdr', { gain: Number(e.target.value) })}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-[10px] font-mono text-blue-400"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* OBD-II */}
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="flex items-center justify-between mb-3">
+                  <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">OBD-II (ELM327)</span>
+                  <button 
+                    onClick={() => handlePeripheralUpdate('obd', { enabled: !peripherals.obd.enabled })}
+                    className={cn("w-8 h-4 rounded-full transition-all relative", peripherals.obd.enabled ? "bg-emerald-500" : "bg-zinc-800")}
+                  >
+                    <div className={cn("absolute top-0.5 w-3 h-3 bg-white rounded-full transition-all", peripherals.obd.enabled ? "left-4.5" : "left-0.5")} />
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  <div className="space-y-1">
+                    <span className="text-[8px] text-zinc-500 uppercase">Serial Port</span>
+                    <input 
+                      type="text" value={peripherals.obd.port}
+                      onChange={(e) => handlePeripheralUpdate('obd', { port: e.target.value })}
+                      className="w-full bg-zinc-900 border border-zinc-800 rounded p-1 text-[10px] font-mono text-emerald-400"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
