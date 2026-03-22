@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Zap, Radio, ShieldAlert, Wifi, AlertCircle, Activity, Info, Cpu, Layers, Sliders } from 'lucide-react';
+import { Zap, Radio, ShieldAlert, Wifi, AlertCircle, Activity, Info, Cpu, Layers, Sliders, Target, Lock, Unlock, Database, Search } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, Cell, Tooltip } from 'recharts';
 import { cn } from '../lib/utils';
 
@@ -11,52 +11,47 @@ export function SignalLab() {
   const [detectedSignals, setDetectedSignals] = useState<string[]>([]);
   const [frequencyData, setFrequencyData] = useState<any[]>([]);
   const [gain, setGain] = useState(20);
+  const [isHopping, setIsHopping] = useState(false);
 
   useEffect(() => {
-    // Simulate frequency scanner data based on source
-    const interval = setInterval(() => {
-      let range = 20;
-      let startFreq = 300;
-      let step = 30;
-
-      if (source === 'hackrf') {
-        range = 40;
-        startFreq = 1;
-        step = 150; // Simplified for visualization
-      } else if (source === 'esp32') {
-        range = 14;
-        startFreq = 2400;
-        step = 5; // 2.4GHz WiFi channels
+    const fetchSignals = async () => {
+      try {
+        const response = await fetch('/api/signals');
+        const data = await response.json();
+        setFrequencyData(data.signals.map((s: any) => ({ freq: s.x.toString(), power: s.y })));
+        setGain(data.gain);
+        if (data.source === 'HACKRF_ONE') setSource('hackrf');
+        else if (data.source === 'ESP32') setSource('esp32');
+        else setSource('internal');
+      } catch (error) {
+        console.error('Failed to fetch signals:', error);
       }
+    };
 
-      const newData = Array.from({ length: range }, (_, i) => ({
-        freq: (startFreq + i * step).toString(),
-        power: Math.random() * (gain / 40 * 100),
-      }));
-      setFrequencyData(newData);
-
-      // Randomly detect "threats" or "networks"
-      if (Math.random() > 0.95) {
-        let threats = ['KA-BAND RADAR', 'K-BAND RADAR', 'LASER DETECTED', 'X-BAND RADAR'];
-        if (source === 'esp32') threats = ['WIFI DEAUTH DETECTED', 'BT BEACON FOUND', 'ROGUE AP DETECTED'];
-        if (source === 'hackrf') threats = ['WIDEBAND SIGNAL', 'GSM UPLINK', 'GPS JAMMING DETECTED'];
-        
-        const threat = threats[Math.floor(Math.random() * threats.length)];
-        setDetectedSignals(prev => [threat, ...prev].slice(0, 5));
-      }
-    }, 800);
+    const interval = setInterval(fetchSignals, 1000);
+    fetchSignals();
 
     return () => clearInterval(interval);
-  }, [source, gain]);
+  }, []);
 
   return (
     <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
       <div className="flex items-center justify-between mb-2">
         <div className="flex items-center gap-3">
-          <Zap className="w-6 h-6 text-amber-500" />
-          <h2 className="text-2xl font-semibold">Signal Lab <span className="text-zinc-500 text-lg font-normal">v2.0</span></h2>
+          <Zap className="w-8 h-8 text-amber-500" />
+          <h2 className="text-3xl font-bold text-white tracking-tight">Signal Lab <span className="text-zinc-500 text-lg font-normal">v2.5 Tactical</span></h2>
         </div>
         <div className="flex items-center gap-4">
+          <button 
+            onClick={() => setIsHopping(!isHopping)}
+            className={cn(
+              "px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center gap-2",
+              isHopping ? "bg-amber-500 text-black shadow-[0_0_15px_rgba(245,158,11,0.4)]" : "bg-zinc-800 text-zinc-400 hover:bg-zinc-700"
+            )}
+          >
+            <Target className={cn("w-4 h-4", isHopping && "animate-pulse")} />
+            Freq Hopping
+          </button>
           <div className="flex bg-zinc-900 p-1 rounded-xl border border-zinc-800">
             {(['internal', 'esp32', 'hackrf'] as const).map((s) => (
               <button
@@ -124,32 +119,44 @@ export function SignalLab() {
 
           <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col">
             <div className="flex items-center gap-3 mb-6">
-              <Radio className="w-5 h-5 text-emerald-500" />
-              <h3 className="text-lg font-medium text-white">Traffic Control</h3>
+              <Database className="w-5 h-5 text-blue-500" />
+              <h3 className="text-lg font-medium text-white">Protocol Analysis</h3>
             </div>
-            
-            <div className="flex-1 flex flex-col justify-center items-center text-center p-4 bg-black/20 rounded-xl border border-zinc-800 mb-6">
-              <div className={cn(
-                "w-16 h-16 rounded-full flex items-center justify-center mb-4 transition-all duration-500",
-                isMirtActive ? "bg-emerald-500 shadow-[0_0_30px_rgba(16,185,129,0.4)]" : "bg-zinc-800"
-              )}>
-                <Wifi className={cn("w-8 h-8", isMirtActive ? "text-white animate-pulse" : "text-zinc-600")} />
+            <div className="space-y-4">
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase mb-1">Active Protocol</div>
+                <div className="text-sm font-mono text-white">DSRC (802.11p)</div>
               </div>
-              <div className="text-[10px] font-medium text-zinc-300 mb-1 uppercase tracking-wider">MIRT Opticom</div>
-              <div className={cn("text-[9px] font-mono uppercase tracking-widest", isMirtActive ? "text-emerald-400" : "text-zinc-500")}>
-                {isMirtActive ? "Broadcasting 14Hz" : "Standby"}
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase mb-1">Modulation</div>
+                <div className="text-sm font-mono text-white">OFDM</div>
+              </div>
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="text-[10px] text-zinc-500 uppercase mb-1">Bandwidth</div>
+                <div className="text-sm font-mono text-white">10 MHz</div>
               </div>
             </div>
+          </div>
 
-            <button
-              onClick={() => setIsMirtActive(!isMirtActive)}
-              className={cn(
-                "w-full py-3 rounded-xl font-bold uppercase tracking-wider transition-all duration-200 text-xs",
-                isMirtActive ? "bg-red-500 hover:bg-red-600 text-white" : "bg-emerald-500 hover:bg-emerald-600 text-white"
-              )}
-            >
-              {isMirtActive ? "Stop MIRT" : "Activate MIRT"}
-            </button>
+          <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col">
+            <div className="flex items-center gap-3 mb-6">
+              <ShieldAlert className="w-5 h-5 text-rose-500" />
+              <h3 className="text-lg font-medium text-white">Tactical Controls</h3>
+            </div>
+            <div className="space-y-3">
+              <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                <Lock className="w-4 h-4" />
+                Signal Jammer
+              </button>
+              <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                <Unlock className="w-4 h-4" />
+                Protocol Bypass
+              </button>
+              <button className="w-full py-3 bg-zinc-800 hover:bg-zinc-700 text-zinc-300 rounded-xl text-xs font-bold uppercase tracking-widest transition-all flex items-center justify-center gap-2">
+                <Search className="w-4 h-4" />
+                PID Scanner
+              </button>
+            </div>
           </div>
         </div>
 

@@ -27,6 +27,25 @@ To build a complete self-driving car using PiDriveOS, you will need the followin
 *   **Drive Motor:** DC motor or brushless motor for propulsion.
 *   **RC Transmitter & Receiver:** **CRITICAL FOR SAFETY.** You must be able to take manual control at any time.
 
+### Hardware Interfacing & Control
+PiDriveOS is optimized for the following compute modules:
+*   **Raspberry Pi 5 (16GB):** Recommended for full autonomous stacks, multi-camera SLAM, and high-speed signal intelligence.
+*   **Raspberry Pi Zero 2 W:** Recommended for lightweight edge nodes, basic motor control, and low-power surveillance.
+
+#### Motor & Servo Control (PCA9685)
+To replace or control native vehicle parts (steering, throttle, braking), PiDriveOS uses the **PCA9685 16-Channel 12-bit PWM Controller** via I2C:
+1.  **Wiring (Pi to PCA9685):**
+    *   VCC -> 3.3V (Pin 1)
+    *   SDA -> SDA (Pin 3)
+    *   SCL -> SCL (Pin 5)
+    *   GND -> GND (Pin 9)
+2.  **Servo Power:** Connect an external 5V-6V power supply to the PCA9685 screw terminals. **DO NOT power high-torque servos directly from the Pi.**
+3.  **Channel Mapping:**
+    *   Channel 0: Steering Servo
+    *   Channel 1: Electronic Speed Controller (ESC) / Throttle
+    *   Channel 2: Braking Actuator (if separate)
+    *   Channels 3-15: Auxiliary (Lights, Pan/Tilt Camera, etc.)
+
 ### Next-Level Signal Lab (Advanced)
 *   **High-Power IR LED Array (940nm):** For MIRT (Mobile Infrared Transmitter) simulation. Connect to GPIO 18 with a high-current transistor (e.g., TIP120).
 *   **HackRF One SDR:** Wideband Software Defined Radio (1MHz to 6GHz). Connect via USB for full-spectrum scanning and signal analysis.

@@ -3,14 +3,31 @@ import { ShieldCheck, Radar, AlertTriangle, ShieldAlert, Eye, Globe, History, In
 import { cn } from '../lib/utils';
 import { SignalThreat, V2VNode, ThreatLevel } from '../types';
 
+import { GoogleGenAI } from "@google/genai";
+
 export function ThreatIntelligence() {
   const [threats, setThreats] = useState<SignalThreat[]>([]);
   const [v2vNodes, setV2vNodes] = useState<V2VNode[]>([]);
   const [isScanning, setIsScanning] = useState(true);
   const [activeAudit, setActiveAudit] = useState<string | null>(null);
+  const [auditResult, setAuditResult] = useState<string | null>(null);
+  const [isAuditing, setIsAuditing] = useState(false);
 
   useEffect(() => {
-    // Simulate V2V Node detection
+    const fetchThreats = async () => {
+      try {
+        const response = await fetch('/api/threats');
+        const data = await response.json();
+        setThreats(data);
+      } catch (error) {
+        console.error('Failed to fetch threats:', error);
+      }
+    };
+
+    const interval = setInterval(fetchThreats, 5000);
+    fetchThreats();
+
+    // Simulate V2V Node detection (still simulated as it's mesh-based)
     const nodeInterval = setInterval(() => {
       const newNode: V2VNode = {
         id: `node-${Math.floor(Math.random() * 1000)}`,
@@ -21,50 +38,41 @@ export function ThreatIntelligence() {
         isMalicious: Math.random() > 0.9,
       };
       setV2vNodes(prev => [newNode, ...prev].slice(0, 12));
-
-      if (newNode.isMalicious) {
-        const threat: SignalThreat = {
-          id: `threat-${Date.now()}`,
-          type: 'V2V_SPOOF',
-          source: newNode.id,
-          frequency: '5.9 GHz',
-          power: -Math.floor(Math.random() * 40 + 50),
-          level: 'HIGH',
-          timestamp: new Date().toISOString(),
-          description: 'Anomalous V2V broadcast detected. Possible position spoofing or replay attack.',
-          isGovernance: false,
-        };
-        setThreats(prev => [threat, ...prev].slice(0, 10));
-      }
     }, 3000);
 
-    // Simulate Governance/Surveillance detection
-    const govInterval = setInterval(() => {
-      if (Math.random() > 0.95) {
-        const types: SignalThreat['type'][] = ['IMSI_CATCHER', 'ALPR_UPLINK', 'GPS_JAMMER'];
-        const type = types[Math.floor(Math.random() * types.length)];
-        const threat: SignalThreat = {
-          id: `gov-${Date.now()}`,
-          type,
-          source: 'UNKNOWN_GOV_NODE',
-          frequency: type === 'IMSI_CATCHER' ? '850 MHz' : type === 'ALPR_UPLINK' ? '915 MHz' : '1.57 GHz',
-          power: -Math.floor(Math.random() * 20 + 30),
-          level: type === 'GPS_JAMMER' ? 'CRITICAL' : 'MEDIUM',
-          timestamp: new Date().toISOString(),
-          description: type === 'IMSI_CATCHER' ? 'Cellular surveillance node detected. IMSI catcher signature match.' : 
-                       type === 'ALPR_UPLINK' ? 'Automated License Plate Recognition data uplink detected.' : 
-                       'GPS signal interference detected. High-power jamming signature.',
-          isGovernance: true,
-        };
-        setThreats(prev => [threat, ...prev].slice(0, 10));
-      }
-    }, 5000);
-
     return () => {
+      clearInterval(interval);
       clearInterval(nodeInterval);
-      clearInterval(govInterval);
     };
   }, []);
+
+  const runAudit = async (threat: SignalThreat) => {
+    setIsAuditing(true);
+    setAuditResult(null);
+    try {
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY! });
+      const response = await ai.models.generateContent({
+        model: "gemini-3-flash-preview",
+        contents: `Analyze this signal threat for a Sovereign Edge AI vehicle cluster:
+        Type: ${threat.type}
+        Source: ${threat.source}
+        Frequency: ${threat.frequency}
+        Power: ${threat.power} dBm
+        Description: ${threat.description}
+        
+        Provide a technical audit including:
+        1. Possible attack vector.
+        2. Impact on cluster stability.
+        3. Recommended defensive action.`,
+      });
+      setAuditResult(response.text);
+    } catch (error) {
+      console.error('Audit failed:', error);
+      setAuditResult('Audit failed. Check connectivity to Sovereign AI engine.');
+    } finally {
+      setIsAuditing(false);
+    }
+  };
 
   const getLevelColor = (level: ThreatLevel) => {
     switch (level) {
@@ -222,7 +230,10 @@ export function ThreatIntelligence() {
                         </div>
                       </div>
                       <button 
-                        onClick={() => setActiveAudit(threat.id)}
+                        onClick={() => {
+                          setActiveAudit(threat.id);
+                          runAudit(threat);
+                        }}
                         className="text-[10px] font-bold text-emerald-500 hover:text-emerald-400 transition-colors uppercase tracking-widest"
                       >
                         Audit Signal
@@ -245,21 +256,30 @@ export function ThreatIntelligence() {
                 <div className="text-[10px] text-blue-400 uppercase tracking-widest mb-2">Cellular Surveillance</div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-zinc-400">IMSI Catchers</span>
-                  <span className="text-sm font-mono text-white">0 Detected</span>
+                  <span className="text-sm font-mono text-white">
+                    {threats.filter(t => t.type === 'IMSI_CATCHER').length} Detected
+                  </span>
                 </div>
               </div>
               <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
                 <div className="text-[10px] text-blue-400 uppercase tracking-widest mb-2">Enforcement Uplinks</div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-zinc-400">ALPR / Speed</span>
-                  <span className="text-sm font-mono text-white">0 Detected</span>
+                  <span className="text-sm font-mono text-white">
+                    {threats.filter(t => t.type === 'ALPR_UPLINK').length} Detected
+                  </span>
                 </div>
               </div>
               <div className="p-4 bg-blue-500/5 border border-blue-500/20 rounded-xl">
                 <div className="text-[10px] text-blue-400 uppercase tracking-widest mb-2">Signal Integrity</div>
                 <div className="flex items-center justify-between">
                   <span className="text-xs text-zinc-400">GPS / V2X</span>
-                  <span className="text-sm font-mono text-emerald-400">SECURE</span>
+                  <span className={cn(
+                    "text-sm font-mono",
+                    threats.some(t => t.type === 'GPS_JAMMER' || t.type === 'V2V_SPOOF') ? "text-rose-400" : "text-emerald-400"
+                  )}>
+                    {threats.some(t => t.type === 'GPS_JAMMER' || t.type === 'V2V_SPOOF') ? "COMPROMISED" : "SECURE"}
+                  </span>
                 </div>
               </div>
             </div>
@@ -267,7 +287,7 @@ export function ThreatIntelligence() {
         </div>
       </div>
 
-      {/* Audit Modal (Simplified) */}
+      {/* Audit Modal */}
       {activeAudit && (
         <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-6 animate-in fade-in duration-300">
           <div className="bg-zinc-900 border border-zinc-800 rounded-3xl p-8 max-w-2xl w-full shadow-2xl">
@@ -276,36 +296,57 @@ export function ThreatIntelligence() {
                 <Search className="w-6 h-6 text-emerald-500" />
                 <h3 className="text-xl font-bold text-white">Sovereign AI Audit Report</h3>
               </div>
-              <button onClick={() => setActiveAudit(null)} className="text-zinc-500 hover:text-white transition-colors">✕</button>
+              <button onClick={() => {
+                setActiveAudit(null);
+                setAuditResult(null);
+              }} className="text-zinc-500 hover:text-white transition-colors">✕</button>
             </div>
             
             <div className="space-y-6">
-              <div className="p-4 bg-black/40 rounded-2xl border border-zinc-800">
+              <div className="p-4 bg-black/40 rounded-2xl border border-zinc-800 min-h-[150px] flex flex-col">
                 <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-2">Signal Analysis</div>
-                <p className="text-sm text-zinc-300 leading-relaxed">
-                  The Gemini 3 Flash reasoning engine has analyzed the signal signature. The source exhibits characteristics of a non-standard DSRC broadcast. High probability of a replay attack targeting the vehicle's collision avoidance system.
-                </p>
+                {isAuditing ? (
+                  <div className="flex-1 flex items-center justify-center gap-3 text-emerald-500">
+                    <div className="w-4 h-4 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                    <span className="text-xs font-mono uppercase tracking-widest">Reasoning Engine Active...</span>
+                  </div>
+                ) : (
+                  <p className="text-sm text-zinc-300 leading-relaxed whitespace-pre-wrap">
+                    {auditResult || "No audit data available."}
+                  </p>
+                )}
               </div>
               
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700">
                   <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Recommendation</div>
-                  <div className="text-sm font-semibold text-emerald-400">ISOLATE NODE</div>
+                  <div className="text-sm font-semibold text-emerald-400 uppercase">
+                    {auditResult ? "ISOLATE SOURCE" : "PENDING"}
+                  </div>
                 </div>
                 <div className="p-4 bg-zinc-800/50 rounded-2xl border border-zinc-700">
                   <div className="text-[10px] text-zinc-500 uppercase tracking-widest mb-1">Action Taken</div>
-                  <div className="text-sm font-semibold text-zinc-300">LOGGED & IGNORED</div>
+                  <div className="text-sm font-semibold text-zinc-300 uppercase">
+                    {auditResult ? "LOGGED & IGNORED" : "WAITING"}
+                  </div>
                 </div>
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-rose-500/10 border border-rose-500/20 rounded-2xl">
                 <AlertTriangle className="w-5 h-5 text-rose-500" />
-                <p className="text-xs text-rose-400">This signal matches known patterns used in governance-led automated enforcement testing.</p>
+                <p className="text-xs text-rose-400">
+                  {threats.find(t => t.id === activeAudit)?.isGovernance 
+                    ? "This signal matches known patterns used in governance-led automated enforcement testing."
+                    : "This signal originates from a non-trusted V2X mesh node."}
+                </p>
               </div>
             </div>
 
             <button 
-              onClick={() => setActiveAudit(null)}
+              onClick={() => {
+                setActiveAudit(null);
+                setAuditResult(null);
+              }}
               className="w-full mt-8 py-4 bg-emerald-500 hover:bg-emerald-600 text-white font-bold rounded-2xl transition-all"
             >
               Close Audit

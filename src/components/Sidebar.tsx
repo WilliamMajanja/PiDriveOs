@@ -15,6 +15,7 @@ export function Sidebar({ activeTab, setActiveTab }: SidebarProps) {
     { id: 'health', label: 'System Health', icon: Activity },
     { id: 'signals', label: 'Signal Lab', icon: Zap },
     { id: 'intel', label: 'Threat Intel', icon: ShieldCheck },
+    { id: 'obd', label: 'OBD II Diagnostics', icon: CarFront },
     { id: 'settings', label: 'Settings', icon: Settings },
   ];
 

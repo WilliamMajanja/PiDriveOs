@@ -1,26 +1,47 @@
 import React, { useState, useEffect } from 'react';
-import { Activity, Cpu, Thermometer, MemoryStick, HardDrive, Wifi } from 'lucide-react';
+import { Activity, Cpu, Thermometer, MemoryStick, HardDrive, Wifi, Info } from 'lucide-react';
+import { PiModel } from '../types';
+import { cn } from '../lib/utils';
 
 export function SystemHealth() {
+  const [piModel, setPiModel] = useState<PiModel>('PI_5_16GB');
   const [stats, setStats] = useState({
-    cpu: 28,
-    temp: 42,
-    ram: 64,
-    disk: 45,
-    network: 15
+    cpu: 0,
+    temp: 0,
+    ram: 0,
+    disk: 0,
+    network: 0
   });
+  const [logs, setLogs] = useState<{ timestamp: string; level: string; message: string }[]>([]);
 
   useEffect(() => {
-    const interval = setInterval(() => {
-      setStats(prev => ({
-        cpu: Math.min(100, Math.max(0, prev.cpu + (Math.random() - 0.5) * 10)),
-        temp: Math.min(85, Math.max(30, prev.temp + (Math.random() - 0.5) * 2)),
-        ram: Math.min(100, Math.max(0, prev.ram + (Math.random() - 0.5) * 5)),
-        disk: 45, // Static for simulation
-        network: Math.min(100, Math.max(0, prev.network + (Math.random() - 0.5) * 20))
-      }));
-    }, 2000);
-    return () => clearInterval(interval);
+    // Real-time Telemetry Fetch
+    const fetchStats = async () => {
+      try {
+        const response = await fetch('/api/telemetry');
+        const data = await response.json();
+        setStats(data);
+      } catch (error) {
+        console.error('Failed to fetch telemetry:', error);
+      }
+    };
+
+    const statsInterval = setInterval(fetchStats, 2000);
+    fetchStats();
+
+    // Live Logs via WebSocket
+    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+    const socket = new WebSocket(`${protocol}//${window.location.host}`);
+
+    socket.onmessage = (event) => {
+      const log = JSON.parse(event.data);
+      setLogs(prev => [log, ...prev].slice(0, 50));
+    };
+
+    return () => {
+      clearInterval(statsInterval);
+      socket.close();
+    };
   }, []);
 
   const getStatusColor = (value: number, warning: number, critical: number) => {
@@ -32,7 +53,7 @@ export function SystemHealth() {
   const MetricCard = ({ title, value, unit, icon: Icon, warning, critical }: any) => {
     const colorClass = getStatusColor(value, warning, critical);
     return (
-      <div className={`border rounded-2xl p-6 shadow-xl transition-colors duration-500 ${colorClass}`}>
+      <div className={cn("border rounded-2xl p-6 shadow-xl transition-all duration-500", colorClass)}>
         <div className="flex justify-between items-start mb-4">
           <div className="flex items-center gap-2 text-sm font-medium uppercase tracking-wider opacity-80">
             <Icon className="w-5 h-5" />
@@ -54,10 +75,16 @@ export function SystemHealth() {
   };
 
   return (
-    <div className="h-full flex flex-col gap-6">
-      <div className="flex items-center gap-3 mb-2">
-        <Activity className="w-6 h-6 text-emerald-500" />
-        <h2 className="text-2xl font-semibold">System Health</h2>
+    <div className="h-full flex flex-col gap-6 animate-in fade-in duration-500">
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-3">
+          <Activity className="w-6 h-6 text-emerald-500" />
+          <h2 className="text-2xl font-semibold">System Health</h2>
+        </div>
+        <div className="flex items-center gap-3 px-4 py-2 bg-zinc-900 border border-zinc-800 rounded-xl">
+          <Cpu className="w-4 h-4 text-zinc-500" />
+          <span className="text-xs font-mono text-zinc-300 uppercase tracking-widest">{piModel.replace(/_/g, ' ')}</span>
+        </div>
       </div>
       
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -68,19 +95,52 @@ export function SystemHealth() {
         <MetricCard title="Network Tx/Rx" value={stats.network} unit="Mbps" icon={Wifi} warning={80} critical={95} />
       </div>
 
-      <div className="mt-8 bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex-1">
-        <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">System Logs</h3>
-        <div className="font-mono text-xs text-zinc-500 space-y-2 overflow-y-auto h-48 bg-black/50 p-4 rounded-xl border border-zinc-800">
-          <div className="text-emerald-500">[INFO] System booted successfully.</div>
-          <div className="text-emerald-500">[INFO] Camera module initialized.</div>
-          <div className="text-emerald-500">[INFO] LiDAR sensor connected on /dev/ttyUSB0.</div>
-          <div className="text-emerald-500">[INFO] AI Model loaded: MobileNet V3.</div>
-          <div className="text-amber-500">[WARN] GPS signal weak. Searching for satellites...</div>
-          <div className="text-emerald-500">[INFO] GPS 3D fix acquired.</div>
-          <div className="text-emerald-500">[INFO] Telemetry stream started.</div>
-          <div className="text-zinc-400">[DEBUG] Frame processing time: 32ms.</div>
-          <div className="text-zinc-400">[DEBUG] Frame processing time: 31ms.</div>
-          <div className="text-zinc-400">[DEBUG] Frame processing time: 33ms.</div>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 flex-1">
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col">
+          <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider mb-4">System Logs</h3>
+          <div className="font-mono text-[10px] text-zinc-500 space-y-2 overflow-y-auto h-48 bg-black/50 p-4 rounded-xl border border-zinc-800 custom-scrollbar">
+            {logs.length === 0 ? (
+              <div className="text-zinc-600 italic">Waiting for live log stream...</div>
+            ) : (
+              logs.map((log, i) => (
+                <div key={i} className={cn(
+                  log.level === 'INFO' ? "text-emerald-500" : 
+                  log.level === 'WARN' ? "text-amber-500" : 
+                  log.level === 'ERROR' ? "text-rose-500" : "text-zinc-400"
+                )}>
+                  [{new Date(log.timestamp).toLocaleTimeString()}] [{log.level}] {log.message}
+                </div>
+              ))
+            )}
+          </div>
+        </div>
+
+        <div className="bg-zinc-900 border border-zinc-800 rounded-2xl p-6 shadow-xl flex flex-col">
+          <div className="flex items-center gap-2 mb-4">
+            <Info className="w-4 h-4 text-blue-500" />
+            <h3 className="text-sm font-medium text-zinc-400 uppercase tracking-wider">Hardware Specs</h3>
+          </div>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="text-[9px] text-zinc-500 uppercase mb-1">Total RAM</div>
+                <div className="text-lg font-mono text-white">{piModel === 'PI_5_16GB' ? '16 GB' : piModel === 'PI_5_8GB' ? '8 GB' : piModel === 'PI_4' ? '4 GB' : '512 MB'}</div>
+              </div>
+              <div className="p-4 bg-black/20 rounded-xl border border-zinc-800">
+                <div className="text-[9px] text-zinc-500 uppercase mb-1">Architecture</div>
+                <div className="text-lg font-mono text-white">ARMv8-A</div>
+              </div>
+            </div>
+            <div className="p-4 bg-emerald-500/5 border border-emerald-500/10 rounded-xl">
+              <p className="text-[10px] text-zinc-400 leading-relaxed">
+                {piModel === 'PI_5_16GB' 
+                  ? "Pi 5 16GB detected. High-performance mode enabled. Large-scale AI models and multi-camera processing are supported."
+                  : piModel === 'ZERO_2_W'
+                  ? "Pi Zero 2 W detected. Low-power mode enabled. Recommended for lightweight edge processing and basic motor control."
+                  : "Standard Pi 4/5 detected. Balanced mode enabled."}
+              </p>
+            </div>
+          </div>
         </div>
       </div>
     </div>
